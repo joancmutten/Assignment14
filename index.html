@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Africa Cancer Distribution Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        #country-select {
+            margin-bottom: 20px;
+        }
+        #chartContainer {
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            color: #777;
+            border: 1px solid #ccc;
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <h1 class="text-center my-4">Africa Cancer Distribution Dashboard</h1>
+
+    <div class="row">
+        <div class="col-md-3">
+            <select id="country-select" class="form-control">
+                <option value="" disabled selected>Select a Country</option>
+                <option value="EGY">Egypt</option>
+                <option value="NGA">Nigeria</option>
+                <option value="ZAF">South Africa</option>
+                <option value="KEN">Kenya</option>
+                <option value="GHA">Ghana</option>
+                <option value="ETH">Ethiopia</option>
+                <option value="TZA">Tanzania</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div id="map"></div>
+        </div>
+        <div class="col-md-6">
+            <div id="chartContainer">
+                <p>Please select a country to view the cancer distribution data.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    var map = L.map('map').setView([0, 20], 3);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 18,
+    }).addTo(map);
+
+    let cancerChart; // Declare the chart variable
+
+    function updateDashboard(country) {
+        document.getElementById('chartContainer').innerHTML = '<canvas id="cancerChart"></canvas>';
+        let lat, lon;
+        let data = {
+            "EGY": {
+                "lat": 26.8206,
+                "lon": 30.8025,
+                "cancers": {"Lung": 180, "Breast": 450, "Prostate": 50, "Colorectal": 120}
+            },
+            "NGA": {
+                "lat": 9.0820,
+                "lon": 8.6753,
+                "cancers": {"Lung": 200, "Breast": 500, "Prostate": 300, "Colorectal": 130}
+            },
+            "ZAF": {
+                "lat": -30.5595,
+                "lon": 22.9375,
+                "cancers": {"Lung": 220, "Breast": 480, "Prostate": 250, "Colorectal": 160}
+            },
+            "KEN": {
+                "lat": -1.2921,
+                "lon": 36.8219,
+                "cancers": {"Lung": 160, "Breast": 430, "Prostate": 80, "Colorectal": 100}
+            },
+            "GHA": {
+                "lat": 7.9465,
+                "lon": -1.0232,
+                "cancers": {"Lung": 120, "Breast": 400, "Prostate": 70, "Colorectal": 110}
+            },
+            "ETH": {
+                "lat": 9.145,
+                "lon": 40.4897,
+                "cancers": {"Lung": 150, "Breast": 350, "Prostate": 90, "Colorectal": 140}
+            },
+            "TZA": {
+                "lat": -6.3690,
+                "lon": 34.8888,
+                "cancers": {"Lung": 170, "Breast": 420, "Prostate": 100, "Colorectal": 150}
+            }
+        };
+
+        if (data[country]) {
+            lat = data[country].lat;
+            lon = data[country].lon;
+
+            map.flyTo([lat, lon], 6, {
+                animate: true,
+                duration: 2.5
+            });
+
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            L.marker([lat, lon]).addTo(map).bindPopup(`<b>${country}</b>`).openPopup();
+
+            updateChart(data[country].cancers);
+        }
+    }
+
+    function updateChart(cancerData) {
+        if (cancerChart) {
+            cancerChart.destroy(); // Destroy the existing chart instance
+        }
+
+        const ctx = document.getElementById('cancerChart').getContext('2d');
+        cancerChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(cancerData),
+                datasets: [{
+                    label: 'Number of Cases',
+                    data: Object.values(cancerData),
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(255, 99, 132, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    document.getElementById('country-select').addEventListener('change', function() {
+        const country = this.value;
+        updateDashboard(country);
+    });
+
+</script>
+
+</body>
+</html>
